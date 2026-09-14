@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Audioguía Museo - Piedra del Sol</title>
+  <meta name="description" content="Ficha de pieza interactiva para audioguía de museo con voz nativa en español y arquitectura dinámica." />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            museum: {
+              50: '#FAF9F6',
+              100: '#F4F2EB',
+              200: '#E8E5DA',
+              800: '#2C2A26',
+              900: '#1C1B18',
+              accent: '#C25E28',
+              gold: '#D49B35'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    @keyframes soundwave {
+      0%, 100% { height: 6px; }
+      50% { height: 28px; }
+    }
+    .wave-bar {
+      width: 4px;
+      border-radius: 9999px;
+      background-color: currentColor;
+      transition: height 0.15s ease;
+    }
+    .playing .wave-bar-1 { animation: soundwave 1.1s ease-in-out infinite 0.1s; }
+    .playing .wave-bar-2 { animation: soundwave 0.8s ease-in-out infinite 0.3s; }
+    .playing .wave-bar-3 { animation: soundwave 1.3s ease-in-out infinite 0.15s; }
+    .playing .wave-bar-4 { animation: soundwave 0.9s ease-in-out infinite 0.4s; }
+    .playing .wave-bar-5 { animation: soundwave 1.2s ease-in-out infinite 0.25s; }
+    .playing .wave-bar-6 { animation: soundwave 0.85s ease-in-out infinite 0.35s; }
+
+    .faq-content {
+      transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-stone-900 text-stone-900 antialiased selection:bg-amber-200 flex justify-center min-h-screen">
+
+  <!-- Contenedor móvil centrado -->
+  <div id="app" class="w-full max-w-[480px] min-h-screen bg-[#FAF8F5] shadow-2xl relative flex flex-col pb-28 border-x border-stone-800/20">
+    <!-- El contenido o pantalla de carga se inyecta dinámicamente -->
+  </div>
+
+  <!-- Notificaciones Toast -->
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 transform -translate-y-16 opacity-0 pointer-events-none">
+    <div class="bg-stone-900/95 text-white px-4 py-2.5 rounded-full shadow-lg backdrop-blur-md text-xs font-medium tracking-wide flex items-center gap-2 border border-stone-700/50">
+      <span id="toast-icon">✓</span>
+      <span id="toast-message">Notificación</span>
+    </div>
+  </div>
+
+  <!-- Modal Zoom -->
+  <div id="image-modal" class="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 hidden opacity-0 transition-opacity duration-300">
+    <div class="flex items-center justify-between pt-2 px-2">
+      <span class="text-stone-400 text-xs font-mono uppercase tracking-widest" id="modal-image-title">Detalle en Alta Resolución</span>
+      <button onclick="closeImageModal()" class="w-10 h-10 rounded-full bg-stone-800/80 text-white flex items-center justify-center hover:bg-stone-700 active:scale-95 transition-all" aria-label="Cerrar vista completa">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+    <div class="flex-1 flex items-center justify-center overflow-hidden p-2">
+      <img id="modal-img-src" src="" alt="" class="max-h-full max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-300" />
+    </div>
+    <div class="text-center pb-4">
+      <p class="text-stone-400 text-xs">Pellizca con dos dedos o explora los relieves concéntricos</p>
+    </div>
+  </div>
+
+  <!-- ARQUITECTURA JS DESACOPLADA -->
+  <script>
+    // Variable global que contendrá los datos descargados del JSON
+    let poiData = null;
+
+    /* Estado de la aplicación */
+    const appState = {
+      isSaved: false,
+      speechRate: 1.0,
+      activeTab: 'quick',
+      foundChallenges: new Set(),
+      openFaqIndex: null,
+      isSpecsOpen: true,
+      audio: {
+        isPlaying: false,
+        isPaused: false,
+        utterance: null,
+        progressInterval: null,
+        elapsedSeconds: 0,
+        estimatedTotalSeconds: 46
+      }
+    };
+
+    /* Función de carga inicial: Descarga el JSON externo */
+    async function initApp() {
+      const root = document.getElementById('app');
+      root.innerHTML = `
+        <div class="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-stone-500">
+          <div class="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+          <p class="text-xs font-medium tracking-wide">Cargando datos del museo...</p>
+        </div>
+      `;
+
+      try {
+        const response = await fetch('antropologia.json');
+        if (!response.ok) throw new Error('No se encontró el archivo antropologia.json');
+        const siteData = await response.json();
+        
+        // Asignamos la primera pieza del catálogo a poiData
+        poiData = siteData.pois[0];
+        renderApp();
+      } catch (error) {
+        console.error("Error al cargar datos:", error);
+        root.innerHTML = `
+          <div class="p-8 text-center text-stone-600 space-y-3 pt-24">
+            <p class="text-3xl">🏛️</p>
+            <p class="text-sm font-bold text-stone-900">No se pudo cargar la información</p>
+            <p class="text-xs text-stone-500">Asegúrate de que antropologia.json esté en la misma carpeta que index.html en GitHub.</p>
+          </div>
+        `;
+      }
+    }
+
+    /* RENDERIZADO DEL DOM A PARTIR DE poiData */
+    function renderApp() {
+      const root = document.getElementById('app');
+      if (!root || !poiData) return;
+
+      const { identification, narrative, visual_challenge, curiosities, specs, faqs, next_recommendation } = poiData;
+
+      root.innerHTML = `
+        <!-- BARRA SUPERIOR -->
+        <header class="sticky top-0 z-40 bg-[#FAF8F5]/90 backdrop-blur-md border-b border-stone-200/70 px-4 py-3 flex items-center justify-between transition-all">
+          <button onclick="handleBackAction()" class="w-10 h-10 -ml-1 rounded-full flex items-center justify-center text-stone-700 hover:bg-stone-200/60 active:scale-95 transition-all" aria-label="Volver a la sala">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M15 19l-7-7 7-7"></path></svg>
+          </button>
+
+          <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-200/80 text-stone-700 text-xs font-medium tracking-tight">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+            <span id="room-indicator">${escapeHtml(identification.room)}</span>
+          </div>
+
+          <div class="flex items-center gap-1">
+            <button onclick="handleShareAction()" class="w-10 h-10 rounded-full flex items-center justify-center text-stone-700 hover:bg-stone-200/60 active:scale-95 transition-all" aria-label="Compartir pieza">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+            </button>
+            <button onclick="toggleSaveAction()" id="save-btn" class="w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 ${appState.isSaved ? 'text-rose-600 bg-rose-50' : 'text-stone-700 hover:bg-stone-200/60'}" aria-label="Guardar en favoritos">
+              <svg class="w-5 h-5 ${appState.isSaved ? 'fill-rose-600 stroke-rose-600' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+            </button>
+          </div>
+        </header>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="flex-1 px-4 pt-3 pb-6 space-y-6">
+
+          <!-- FOTO PRINCIPAL -->
+          <section class="relative rounded-3xl overflow-hidden shadow-lg bg-stone-950 aspect-square group cursor-pointer" onclick="openImageModal()">
+            <img 
+              src="${identification.hero_image}" 
+              alt="${escapeHtml(identification.title)}" 
+              class="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700 ease-out"
+              loading="eager"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none"></div>
+
+            <div class="absolute top-3 left-3 flex flex-wrap gap-1.5 max-w-[80%]">
+              ${identification.tags.map((tag, idx) => `
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold tracking-wide backdrop-blur-md shadow-sm ${
+                  idx === 0 ? 'bg-amber-500/90 text-white' : 'bg-black/60 text-stone-200 border border-white/10'
+                }">
+                  ${escapeHtml(tag)}
+                </span>
+              `).join('')}
+            </div>
+
+            <button class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 backdrop-blur-md text-stone-200 border border-white/15 flex items-center justify-center hover:bg-black/80 transition-colors" aria-label="Ampliar imagen">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path></svg>
+            </button>
+
+            <div class="absolute bottom-3 left-3 right-3 text-white">
+              <span class="text-[11px] font-medium tracking-wider uppercase text-amber-300 drop-shadow-sm">${escapeHtml(identification.culture)}</span>
+              <p class="text-xs text-stone-300 font-normal drop-shadow-sm line-clamp-1">${escapeHtml(identification.period)}</p>
+            </div>
+          </section>
+
+          <!-- TÍTULO -->
+          <section class="space-y-2 pt-1">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-stone-200/90 text-stone-700 text-[10px] font-bold tracking-widest uppercase">${escapeHtml(identification.culture)}</span>
+              <span class="text-stone-400 text-xs">•</span>
+              <span class="text-stone-500 text-xs font-medium">${escapeHtml(identification.period)}</span>
+            </div>
+
+            <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-stone-900 leading-tight">
+              ${escapeHtml(identification.title)}
+            </h1>
+
+            <p class="text-sm font-medium text-stone-600 leading-snug">
+              ${escapeHtml(narrative.one_liner)}
+            </p>
+          </section>
+
+          <!-- REPRODUCTOR AUDIOGUÍA -->
+          <section class="rounded-2xl p-4 bg-gradient-to-br from-stone-900 via-stone-800 to-stone-950 text-white shadow-xl relative overflow-hidden border border-stone-800">
+            <div class="absolute -right-10 -top-10 w-36 h-36 rounded-full bg-amber-500/15 blur-2xl pointer-events-none"></div>
+
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <span class="relative flex h-2.5 w-2.5">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                </span>
+                <span class="text-[11px] font-bold tracking-wider uppercase text-amber-400/90">Audioguía Oficial</span>
+              </div>
+              
+              <div class="flex items-center bg-stone-800/80 rounded-full p-0.5 border border-stone-700/60">
+                <button onclick="cycleSpeechRate()" class="px-2 py-0.5 text-[10px] font-semibold text-stone-300 hover:text-white rounded-full transition-colors" title="Cambiar velocidad">
+                  <span id="speed-label">${appState.speechRate}x</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-4 py-1">
+              <button 
+                onclick="toggleSpeechAudio()" 
+                id="audioguide-play-btn"
+                class="w-14 h-14 shrink-0 rounded-full bg-amber-500 hover:bg-amber-400 active:scale-95 text-stone-950 font-bold flex items-center justify-center shadow-lg shadow-amber-500/30 transition-all cursor-pointer"
+                aria-label="Reproducir audioguía"
+              >
+                <svg id="play-icon" class="w-6 h-6 ml-0.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                <svg id="pause-icon" class="w-6 h-6 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+              </button>
+
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-1.5">
+                  <div class="truncate">
+                    <p class="text-xs font-semibold text-white">Voz de sala guiada</p>
+                    <p id="audio-status-text" class="text-[11px] text-stone-400 truncate">Voz nativa en español lista</p>
+                  </div>
+
+                  <div id="soundwave-container" class="flex items-center gap-1 h-7 px-2 text-amber-400 opacity-60 transition-opacity">
+                    <span class="wave-bar wave-bar-1 h-2"></span>
+                    <span class="wave-bar wave-bar-2 h-3"></span>
+                    <span class="wave-bar wave-bar-3 h-4"></span>
+                    <span class="wave-bar wave-bar-4 h-2"></span>
+                    <span class="wave-bar wave-bar-5 h-3"></span>
+                    <span class="wave-bar wave-bar-6 h-1"></span>
+                  </div>
+                </div>
+
+                <div class="w-full bg-stone-700/60 rounded-full h-1.5 overflow-hidden">
+                  <div id="audio-progress-bar" class="bg-amber-400 h-full w-0 transition-all duration-300 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 mt-2 border-t border-stone-800/80 text-[11px] text-stone-400">
+              <span id="audio-time-label">0:00 / ~0:46 min</span>
+              <button onclick="restartSpeechAudio()" class="hover:text-stone-200 flex items-center gap-1 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                <span>Reiniciar</span>
+              </button>
+            </div>
+          </section>
+
+          <!-- SELECTOR DE LECTURA -->
+          <section class="bg-white rounded-2xl p-4 shadow-sm border border-stone-200/80 space-y-3">
+            <div class="flex p-1 bg-stone-100 rounded-xl">
+              <button 
+                onclick="switchTab('quick')" 
+                id="tab-btn-quick" 
+                class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-stone-900 bg-white shadow-sm"
+              >
+                Vistazo rápido
+              </button>
+              <button 
+                onclick="switchTab('expert')" 
+                id="tab-btn-expert" 
+                class="flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-stone-500 hover:text-stone-800"
+              >
+                Para expertos
+              </button>
+            </div>
+
+            <div class="text-stone-700 text-sm leading-relaxed pt-1 min-h-[90px]">
+              <div id="narrative-content" class="transition-opacity duration-200">
+                ${escapeHtml(narrative.short_desc)}
+              </div>
+            </div>
+          </section>
+
+          <!-- RETO VISUAL -->
+          <section class="space-y-3">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-xs">
+                  👁
+                </div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-stone-900">
+                  Párate frente a la pieza y busca
+                </h2>
+              </div>
+              <span id="challenge-counter" class="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60">
+                0 de ${visual_challenge.length} encontrados
+              </span>
+            </div>
+
+            <div class="space-y-2.5">
+              ${visual_challenge.map((item, idx) => `
+                <div 
+                  onclick="toggleChallenge('${item.id}')"
+                  id="card-${item.id}" 
+                  class="group p-3.5 rounded-2xl bg-white border border-stone-200/80 hover:border-amber-400/80 transition-all cursor-pointer shadow-sm hover:shadow active:scale-[0.99] flex items-start gap-3"
+                >
+                  <div class="mt-0.5">
+                    <div id="check-${item.id}" class="w-5 h-5 rounded-md border-2 border-stone-300 flex items-center justify-center group-hover:border-amber-500 transition-colors bg-white">
+                      <svg class="w-3.5 h-3.5 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                    </div>
+                  </div>
+                  <div class="flex-1">
+                    <div class="flex items-center gap-2">
+                      <span class="text-[11px] font-bold text-amber-800/80 tracking-wide uppercase">Pista 0${idx + 1}</span>
+                      <h3 class="text-xs font-bold text-stone-900">${escapeHtml(item.title)}</h3>
+                    </div>
+                    <p class="text-xs text-stone-600 mt-1 leading-snug">${escapeHtml(item.clue)}</p>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+
+          <!-- CURIOSIDADES -->
+          <section class="space-y-3">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-lg bg-orange-100 text-orange-800 flex items-center justify-center font-bold text-xs">
+                💡
+              </div>
+              <h2 class="text-sm font-bold uppercase tracking-wider text-stone-900">
+                ¿Sabías qué?
+              </h2>
+            </div>
+
+            <div class="space-y-2.5">
+              ${curiosities.map((item, index) => {
+                const colors = [
+                  'from-amber-50 to-orange-50/60 border-amber-200/70 text-amber-900',
+                  'from-stone-50 to-amber-50/50 border-stone-200/80 text-stone-800',
+                  'from-orange-50 to-rose-50/50 border-orange-200/70 text-stone-900'
+                ];
+                const bgStyle = colors[index % colors.length];
+                return `
+                  <div class="p-3.5 rounded-2xl bg-gradient-to-br ${bgStyle} border shadow-sm relative overflow-hidden flex gap-3">
+                    <span class="text-base font-black text-amber-600/40 select-none">#${index + 1}</span>
+                    <p class="text-xs leading-relaxed font-medium">${escapeHtml(item.fact)}</p>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </section>
+
+          <!-- FICHA TÉCNICA -->
+          <section class="bg-white rounded-2xl p-4 shadow-sm border border-stone-200/80 space-y-3">
+            <div class="flex items-center justify-between cursor-pointer select-none" onclick="toggleSpecsAccordion()">
+              <div class="flex items-center gap-2">
+                <div class="w-6 h-6 rounded-lg bg-stone-100 text-stone-800 flex items-center justify-center font-bold text-xs">
+                  📐
+                </div>
+                <h2 class="text-sm font-bold uppercase tracking-wider text-stone-900">
+                  Ficha Técnica
+                </h2>
+              </div>
+              <svg id="specs-chevron" class="w-4 h-4 text-stone-500 transform transition-transform duration-200 ${appState.isSpecsOpen ? 'rotate-180' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+            </div>
+
+            <div id="specs-body" class="${appState.isSpecsOpen ? 'block' : 'hidden'} pt-1">
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                ${specs.map(spec => `
+                  <div class="p-2.5 rounded-xl bg-stone-50 border border-stone-200/60">
+                    <span class="block text-[10px] font-semibold uppercase tracking-wider text-stone-400 mb-0.5">${escapeHtml(spec.label)}</span>
+                    <span class="font-bold text-stone-900">${escapeHtml(spec.value)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </section>
+
+          <!-- FAQS -->
+          <section class="space-y-3">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-lg bg-stone-200 text-stone-800 flex items-center justify-center font-bold text-xs">
+                💬
+              </div>
+              <h2 class="text-sm font-bold uppercase tracking-wider text-stone-900">
+                Preguntas Frecuentes
+              </h2>
+            </div>
+
+            <div class="space-y-2" id="faq-accordion-container">
+              ${faqs.map((faq, index) => `
+                <div class="rounded-2xl bg-white border border-stone-200/80 shadow-sm overflow-hidden transition-all">
+                  <button 
+                    onclick="toggleFaq(${index})" 
+                    class="w-full text-left p-3.5 flex items-center justify-between gap-2 hover:bg-stone-50/80 transition-colors"
+                    aria-expanded="${appState.openFaqIndex === index}"
+                  >
+                    <span class="text-xs font-bold text-stone-900">${escapeHtml(faq.question)}</span>
+                    <svg id="faq-chevron-${index}" class="w-4 h-4 text-stone-400 shrink-0 transform transition-transform duration-200 ${appState.openFaqIndex === index ? 'rotate-180 text-amber-600' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                  </button>
+                  <div 
+                    id="faq-answer-${index}" 
+                    class="faq-content px-3.5 pb-3 text-xs text-stone-600 leading-relaxed border-t border-stone-100 ${appState.openFaqIndex === index ? 'block' : 'hidden'}"
+                  >
+                    <p class="pt-2">${escapeHtml(faq.answer)}</p>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </section>
+
+        </main>
+
+        <!-- BARRA INFERIOR FIJA -->
+        <footer class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] p-3 bg-white/85 backdrop-blur-lg border-t border-stone-200/80 z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+          <div class="flex items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <span class="block text-[10px] font-bold uppercase tracking-wider text-amber-700">Siguiente parada recomendada</span>
+              <p class="text-xs font-bold text-stone-900 truncate">${escapeHtml(next_recommendation.next_poi_name)}</p>
+            </div>
+            
+            <button 
+              onclick="handleNextPoiNavigation('${escapeHtml(next_recommendation.next_poi_id)}', '${escapeHtml(next_recommendation.next_poi_name)}')"
+              class="px-4 py-2.5 bg-stone-900 hover:bg-black text-white text-xs font-bold rounded-xl shadow-md flex items-center gap-1.5 active:scale-95 transition-all shrink-0 cursor-pointer"
+            >
+              <span>Ir a la pieza</span>
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+          </div>
+        </footer>
+      `;
+    }
+
+    /* UTILIDADES & FEEDBACK */
+    function escapeHtml(text) {
+      if (typeof text !== 'string') return text;
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function showToast(message, icon = '✓') {
+      const toast = document.getElementById('toast');
+      const msgElem = document.getElementById('toast-message');
+      const iconElem = document.getElementById('toast-icon');
+      if (!toast || !msgElem) return;
+
+      msgElem.innerText = message;
+      if (iconElem) iconElem.innerText = icon;
+
+      toast.classList.remove('-translate-y-16', 'opacity-0', 'pointer-events-none');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('-translate-y-16', 'opacity-0', 'pointer-events-none');
+      }, 2500);
+    }
+
+    /* CONTROLADOR DE VOZ */
+    function getSpanishVoice() {
+      if (!('speechSynthesis' in window)) return null;
+      const voices = window.speechSynthesis.getVoices();
+      const esMx = voices.find(v => v.lang === 'es-MX' || v.lang === 'es_MX');
+      if (esMx) return esMx;
+      const esAny = voices.find(v => v.lang.startsWith('es'));
+      if (esAny) return esAny;
+      return voices[0] || null;
+    }
+
+    function toggleSpeechAudio() {
+      if (!('speechSynthesis' in window)) {
+        showToast('Navegador sin soporte de voz nativa', '⚠️');
+        return;
+      }
+
+      const synth = window.speechSynthesis;
+
+      if (appState.audio.isPlaying && !appState.audio.isPaused) {
+        synth.pause();
+        appState.audio.isPaused = true;
+        updateAudioUIState(false);
+        showToast('Audioguía en pausa', '⏸');
+        return;
+      }
+
+      if (appState.audio.isPaused) {
+        synth.resume();
+        appState.audio.isPaused = false;
+        appState.audio.isPlaying = true;
+        updateAudioUIState(true);
+        startProgressTimer();
+        showToast('Continuando narración', '▶');
+        return;
+      }
+
+      startFreshSpeech();
+    }
+
+    function startFreshSpeech() {
+      const synth = window.speechSynthesis;
+      synth.cancel();
+
+      const text = poiData.audioguide.audio_script;
+      const utterance = new SpeechSynthesisUtterance(text);
+      appState.audio.utterance = utterance;
+
+      const voice = getSpanishVoice();
+      if (voice) {
+        utterance.voice = voice;
+        utterance.lang = voice.lang;
+      } else {
+        utterance.lang = 'es-MX';
+      }
+
+      utterance.rate = appState.speechRate;
+      utterance.pitch = 1.0;
+
+      utterance.onstart = () => {
+        appState.audio.isPlaying = true;
+        appState.audio.isPaused = false;
+        appState.audio.elapsedSeconds = 0;
+        updateAudioUIState(true);
+        startProgressTimer();
+        showToast('Reproduciendo audioguía', '🎧');
+      };
+
+      utterance.onend = () => {
+        resetAudioState();
+        showToast('Audioguía completada', '✅');
+      };
+
+      utterance.onerror = () => {
+        resetAudioState();
+      };
+
+      utterance.onpause = () => {
+        appState.audio.isPaused = true;
+        updateAudioUIState(false);
+      };
+
+      utterance.onresume = () => {
+        appState.audio.isPaused = false;
+        appState.audio.isPlaying = true;
+        updateAudioUIState(true);
+      };
+
+      synth.speak(utterance);
+    }
+
+    function restartSpeechAudio() {
+      startFreshSpeech();
+    }
+
+    function cycleSpeechRate() {
+      const rates = [1.0, 1.25, 1.5];
+      const currentIndex = rates.indexOf(appState.speechRate);
+      const nextIndex = (currentIndex + 1) % rates.length;
+      appState.speechRate = rates[nextIndex];
+
+      const speedLabel = document.getElementById('speed-label');
+      if (speedLabel) speedLabel.innerText = `${appState.speechRate}x`;
+
+      showToast(`Velocidad: ${appState.speechRate}x`);
+
+      if (appState.audio.isPlaying) {
+        startFreshSpeech();
+      }
+    }
+
+    function resetAudioState() {
+      appState.audio.isPlaying = false;
+      appState.audio.isPaused = false;
+      appState.audio.elapsedSeconds = 0;
+      clearInterval(appState.audio.progressInterval);
+      updateAudioUIState(false);
+      const progressBar = document.getElementById('audio-progress-bar');
+      if (progressBar) progressBar.style.width = '0%';
+      const timeLabel = document.getElementById('audio-time-label');
+      if (timeLabel) timeLabel.innerText = '0:00 / ~0:46 min';
+    }
+
+    function updateAudioUIState(isPlaying) {
+      const playIcon = document.getElementById('play-icon');
+      const pauseIcon = document.getElementById('pause-icon');
+      const soundwaveContainer = document.getElementById('soundwave-container');
+      const statusText = document.getElementById('audio-status-text');
+
+      if (playIcon && pauseIcon) {
+        if (isPlaying) {
+          playIcon.classList.add('hidden');
+          pauseIcon.classList.remove('hidden');
+        } else {
+          playIcon.classList.remove('hidden');
+          pauseIcon.classList.add('hidden');
+        }
+      }
+
+      if (soundwaveContainer) {
+        if (isPlaying) {
+          soundwaveContainer.classList.add('playing', 'opacity-100');
+          soundwaveContainer.classList.remove('opacity-60');
+        } else {
+          soundwaveContainer.classList.remove('playing', 'opacity-100');
+          soundwaveContainer.classList.add('opacity-60');
+        }
+      }
+
+      if (statusText) {
+        if (isPlaying) {
+          statusText.innerText = 'Narrando en vivo...';
+          statusText.classList.add('text-amber-400');
+          statusText.classList.remove('text-stone-400');
+        } else if (appState.audio.isPaused) {
+          statusText.innerText = 'Pausado';
+          statusText.classList.remove('text-amber-400');
+          statusText.classList.add('text-stone-400');
+        } else {
+          statusText.innerText = 'Voz nativa en español lista';
+          statusText.classList.remove('text-amber-400');
+          statusText.classList.add('text-stone-400');
+        }
+      }
+    }
+
+    function startProgressTimer() {
+      clearInterval(appState.audio.progressInterval);
+      const progressBar = document.getElementById('audio-progress-bar');
+      const timeLabel = document.getElementById('audio-time-label');
+
+      appState.audio.progressInterval = setInterval(() => {
+        if (!appState.audio.isPlaying || appState.audio.isPaused) return;
+
+        appState.audio.elapsedSeconds += 1;
+        const total = Math.round(appState.audio.estimatedTotalSeconds / appState.speechRate);
+        const percent = Math.min(100, Math.round((appState.audio.elapsedSeconds / total) * 100));
+
+        if (progressBar) progressBar.style.width = `${percent}%`;
+        if (timeLabel) {
+          const mins = Math.floor(appState.audio.elapsedSeconds / 60);
+          const secs = (appState.audio.elapsedSeconds % 60).toString().padStart(2, '0');
+          timeLabel.innerText = `${mins}:${secs} / ~0:46 min`;
+        }
+      }, 1000);
+    }
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        getSpanishVoice();
+      };
+    }
+
+    /* INTERACCIONES */
+    function switchTab(tab) {
+      appState.activeTab = tab;
+      const btnQuick = document.getElementById('tab-btn-quick');
+      const btnExpert = document.getElementById('tab-btn-expert');
+      const narrativeContent = document.getElementById('narrative-content');
+
+      if (tab === 'quick') {
+        btnQuick.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-stone-900 bg-white shadow-sm';
+        btnExpert.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-stone-500 hover:text-stone-800';
+        narrativeContent.innerHTML = escapeHtml(poiData.narrative.short_desc);
+      } else {
+        btnExpert.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-stone-900 bg-white shadow-sm';
+        btnQuick.className = 'flex-1 py-1.5 text-xs font-semibold rounded-lg transition-all text-stone-500 hover:text-stone-800';
+        narrativeContent.innerHTML = escapeHtml(poiData.narrative.deep_desc);
+      }
+    }
+
+    function toggleChallenge(id) {
+      const card = document.getElementById(`card-${id}`);
+      const check = document.getElementById(`check-${id}`);
+      if (!card || !check) return;
+
+      const isFound = appState.foundChallenges.has(id);
+      const icon = check.querySelector('svg');
+
+      if (isFound) {
+        appState.foundChallenges.delete(id);
+        card.classList.remove('bg-amber-50/80', 'border-amber-400');
+        card.classList.add('bg-white', 'border-stone-200/80');
+        check.classList.remove('bg-amber-500', 'border-amber-500');
+        check.classList.add('bg-white', 'border-stone-300');
+        if (icon) icon.classList.add('hidden');
+      } else {
+        appState.foundChallenges.add(id);
+        card.classList.add('bg-amber-50/80', 'border-amber-400');
+        card.classList.remove('bg-white', 'border-stone-200/80');
+        check.classList.add('bg-amber-500', 'border-amber-500');
+        check.classList.remove('bg-white', 'border-stone-300');
+        if (icon) icon.classList.remove('hidden');
+      }
+
+      const count = appState.foundChallenges.size;
+      const total = poiData.visual_challenge.length;
+      const counterElem = document.getElementById('challenge-counter');
+      if (counterElem) {
+        counterElem.innerText = `${count} de ${total} encontrados`;
+      }
+
+      if (count === total) {
+        showToast('¡Felicidades! Has descubierto todos los detalles', '🌟');
+      } else if (!isFound) {
+        showToast('¡Detalle encontrado!', '👁️');
+      }
+    }
+
+    function toggleFaq(index) {
+      const isAlreadyOpen = appState.openFaqIndex === index;
+      appState.openFaqIndex = isAlreadyOpen ? null : index;
+
+      poiData.faqs.forEach((_, i) => {
+        const answer = document.getElementById(`faq-answer-${i}`);
+        const chevron = document.getElementById(`faq-chevron-${i}`);
+        if (!answer || !chevron) return;
+
+        if (i === appState.openFaqIndex) {
+          answer.classList.remove('hidden');
+          chevron.classList.add('rotate-180', 'text-amber-600');
+        } else {
+          answer.classList.add('hidden');
+          chevron.classList.remove('rotate-180', 'text-amber-600');
+        }
+      });
+    }
+
+    function toggleSpecsAccordion() {
+      appState.isSpecsOpen = !appState.isSpecsOpen;
+      const body = document.getElementById('specs-body');
+      const chevron = document.getElementById('specs-chevron');
+      if (body) body.classList.toggle('hidden', !appState.isSpecsOpen);
+      if (chevron) chevron.classList.toggle('rotate-180', appState.isSpecsOpen);
+    }
+
+    function toggleSaveAction() {
+      appState.isSaved = !appState.isSaved;
+      const saveBtn = document.getElementById('save-btn');
+      if (saveBtn) {
+        const svg = saveBtn.querySelector('svg');
+        if (appState.isSaved) {
+          saveBtn.className = 'w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 text-rose-600 bg-rose-50';
+          if (svg) svg.className = 'w-5 h-5 fill-rose-600 stroke-rose-600';
+          showToast('Guardado en tus favoritos', '❤️');
+        } else {
+          saveBtn.className = 'w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-95 text-stone-700 hover:bg-stone-200/60';
+          if (svg) svg.className = 'w-5 h-5';
+          showToast('Eliminado de tus favoritos', '🗑️');
+        }
+      }
+    }
+
+    function handleShareAction() {
+      if (navigator.share) {
+        navigator.share({
+          title: poiData.identification.title,
+          text: poiData.narrative.one_liner,
+          url: window.location.href
+        }).catch(() => {});
+      } else {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(window.location.href);
+          showToast('Enlace de la audioguía copiado', '📋');
+        } else {
+          showToast('Pieza compartida', '🔗');
+        }
+      }
+    }
+
+    function handleBackAction() {
+      showToast(`Regresando a ${poiData.identification.room}`, '🏛️');
+    }
+
+    function handleNextPoiNavigation(id, name) {
+      showToast(`Cargando siguiente parada: ${name}`, '🚶‍♂️');
+    }
+
+    function openImageModal() {
+      const modal = document.getElementById('image-modal');
+      const modalImg = document.getElementById('modal-img-src');
+      const modalTitle = document.getElementById('modal-image-title');
+      if (!modal || !modalImg) return;
+
+      modalImg.src = poiData.identification.hero_image;
+      if (modalTitle) modalTitle.innerText = `${poiData.identification.title} - Inspección`;
+
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modal.classList.add('opacity-100');
+      }, 10);
+    }
+
+    function closeImageModal() {
+      const modal = document.getElementById('image-modal');
+      if (!modal) return;
+      modal.classList.remove('opacity-100');
+      modal.classList.add('opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 300);
+    }
+
+    /* Iniciar carga dinámica al cargar la página */
+    document.addEventListener('DOMContentLoaded', () => initApp());
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+      initApp();
+    }
+  </script>
+</body>
+</html>
