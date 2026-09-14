@@ -18,7 +18,7 @@
         "deep_desc": "La pieza sintetiza la visión espacio-temporal mexica. En su centro figura el rostro del Quinto Sol (Nahui Ollin), rodeado por los glifos de las cuatro eras cósmicas extintas por agua, jaguares, lluvia de fuego y viento. La banda externa está delimitada por dos xiuhcóatl (serpientes de fuego celestes) enfrentadas en la base. Contrario a la creencia popular, no se exhibía verticalmente en muros, sino en posición horizontal sobre una plataforma como ofrendatorio solar."
       },
       "audioguide": {
-        "audio_script": "Párate justo al centro frente a la gran piedra. Tienes ante ti veinticuatro toneladas de basalto talladas hace más de quinientos años. No era un calendario de pared; era un altar sagrado. Mira el rostro central: porta un cuchillo de pedernal en lugar de lengua humana, exigiendo alimento cósmico para que el sol vuelva a salir. Fíjate en el borde exterior: dos inmensas serpientes de fuego se arquean por los costados hasta encontrarse frente a frente en la base. Mientras la miras, recuerda que estuvo enterrada durante dos siglos bajo el Zócalo hasta ser rescatada en 1790."
+        "audio_script": "Párate justo al centro frente a la gran piedra. Tienes ante ti veinticuatro toneladas de basalto talladas hace más de quinientos años. No era un calendario de pared; era un altar sagrado. Mira el rostro central: porta un cuchillo de pedernal en lugar de lengua humana, exigiendo alimento cósmico para que el sol vuelva a salir. Fíjate en el borde exterior: dos inmensas serpientes de fuego se arquean por los costados hasta encontrarse frente a frente en la base."
       },
       "visual_challenge": [
         {
@@ -34,7 +34,7 @@
         {
           "id": "challenge-3",
           "title": "El choque de serpientes",
-          "clue": "Mira la parte más baja del disco donde dos cabezas de reptil abren sus fauces con rostros humanos adentro."
+          "clue": "Mira la parte más baja del disco donde dos cabezas de reptil abren sus fauces."
         }
       ],
       "curiosities": [
@@ -44,7 +44,7 @@
         },
         {
           "id": "curiosity-2",
-          "fact": "Soldados estadounidenses en la invasión de 1847 la usaron como blanco de tiro al blanco; los impactos rasantes aún son visibles."
+          "fact": "Soldados estadounidenses en la invasión de 1847 la usaron como blanco de tiro; los impactos rasantes aún son visibles."
         },
         {
           "id": "curiosity-3",
@@ -61,20 +61,87 @@
       "faqs": [
         {
           "question": "¿Por qué se le llama erróneamente calendario?",
-          "answer": "Porque contiene la cuenta de los 20 días sagrados del tonalpohualli. Sin embargo, carece de divisiones de meses y su función ritual era astronómica y de sacrificio, no de almanaque civil."
+          "answer": "Porque contiene los 20 días sagrados del tonalpohualli, pero su función ritual era astronómica y de ofrendas, no un almanaque civil."
         },
         {
-          "question": "¿Quién es el personaje tallado al centro?",
-          "answer": "La hipótesis predominante señala a Tonatiuh, dios solar mexica, aunque especialistas también ven rasgos de Tlaltecuhtli, la deidad terrestre devoradora de corazones en el ocaso cósmico."
-        },
-        {
-          "question": "¿Cómo fue trasladada semejante masa de roca?",
-          "answer": "Fue arrastrada desde los yacimientos volcánicos de San Ángel o Xochimilco mediante troncos, sogas y miles de hombres a través de calzadas y balsas sobre el lago de Texcoco."
+          "question": "¿Es la pieza original?",
+          "answer": "Sí, es el bloque original rescatado intacto en 1790."
         }
       ],
       "next_recommendation": {
-        "next_poi_name": "Coatlicue, la del faldón de serpientes",
-        "next_poi_id": "mna-coatlicue"
+        "next_poi_name": "Coatlicue, madre de los dioses",
+        "next_poi_id": "coatlicue"
+      }
+    },
+    {
+      "poi_id": "coatlicue",
+      "identification": {
+        "title": "Coatlicue",
+        "culture": "Mexica (Azteca)",
+        "period": "Posclásico Tardío (ca. 1487 - 1521 d.C.)",
+        "room": "Sala 6: Mexica",
+        "tags": ["Imperdible", "Diosa Madre", "Monolito"],
+        "hero_image": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Coatlicue_de_frente.jpg/800px-Coatlicue_de_frente.jpg"
+      },
+      "narrative": {
+        "one_liner": "La sobrecogedora diosa de la fertilidad, la vida y la muerte mexica.",
+        "short_desc": "Monolito colosal de andesita que representa a la madre de Huitzilopochtli y patrona de la tierra. Su faldón de serpientes entrelazadas y su torso decapitado encarnan las fuerzas devoradoras y generadoras del cosmos.",
+        "deep_desc": "Descubierta en agosto de 1790, apenas meses antes que la Piedra del Sol. Las autoridades virreinales se asustaron tanto de su imponente aspecto y del fervor indígena que causaba, que ordenaron enterrarla nuevamente en el patio de la Real Universidad durante décadas para evitar la idolatría. No tiene cabeza humana: los dos chorros de sangre que brotaron de su cuello degollado toman la forma de dos cabezas de serpiente encontradas cara a cara."
+      },
+      "audioguide": {
+        "audio_script": "Camina hacia la imponente escultura de Coatlicue y párate justo enfrente. Su nombre en náhuatl significa 'la del faldón de serpientes'. Observa su silueta: no tiene cabeza humana. En su lugar, dos cabezas de serpiente se miran frente a frente; son dos chorros de sangre brotando tras ser decapitada. Mira su pecho: cuelga un collar de manos cortadas, corazones humanos y un cráneo. Para los mexicas, la tierra no solo da la vida; también debe devorar los cuerpos para regenerar el universo."
+      },
+      "visual_challenge": [
+        {
+          "id": "challenge-1",
+          "title": "Las cabezas enfrentadas",
+          "clue": "Mira el cuello. Busca las dos cabezas de serpiente que se unen de perfil para formar una sola cara."
+        },
+        {
+          "id": "challenge-2",
+          "title": "El collar de ofrendas",
+          "clue": "Busca en su pecho las manos humanas mutiladas y los corazones colgando alrededor del cráneo central."
+        },
+        {
+          "id": "challenge-3",
+          "title": "Las garras de águila",
+          "clue": "Baja la vista a sus pies: no son pies humanos, son garras de rapaz preparadas para desgarrar la tierra."
+        }
+      ],
+      "curiosities": [
+        {
+          "id": "curiosity-1",
+          "fact": "La volvieron a enterrar en secreto en 1790 porque los indígenas iban a escondidas a dejarle veladoras y flores."
+        },
+        {
+          "id": "curiosity-2",
+          "fact": "La base oculta debajo de la estatua, que nadie ve a simple vista, tiene tallado al dios del inframundo Tlaltecuhtli."
+        },
+        {
+          "id": "curiosity-3",
+          "fact": "Pesa más de 3 toneladas y mide dos metros y medio de altura."
+        }
+      ],
+      "specs": [
+        { "label": "Material", "value": "Andesita basáltica" },
+        { "label": "Altura", "value": "2.52 metros" },
+        { "label": "Ancho", "value": "1.38 metros" },
+        { "label": "Peso", "value": "3.2 toneladas" },
+        { "label": "Hallazgo", "value": "13 de agosto de 1790" }
+      ],
+      "faqs": [
+        {
+          "question": "¿Por qué no tiene cabeza humana?",
+          "answer": "Fue decapitada por sus propios hijos, y los dos chorros de sangre que brotaron se transformaron en cabezas de serpiente."
+        },
+        {
+          "question": "¿Quién era su hijo principal?",
+          "answer": "Huitzilopochtli, el dios mexica de la guerra y patrono de Tenochtitlan."
+        }
+      ],
+      "next_recommendation": {
+        "next_poi_name": "Piedra del Sol",
+        "next_poi_id": "piedra-del-sol"
       }
     }
   ]
