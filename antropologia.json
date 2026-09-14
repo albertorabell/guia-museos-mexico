@@ -1,0 +1,81 @@
+{
+  "site_id": "mna",
+  "name": "Museo Nacional de Antropología",
+  "pois": [
+    {
+      "poi_id": "piedra-del-sol",
+      "identification": {
+        "title": "Piedra del Sol",
+        "culture": "Mexica (Azteca)",
+        "period": "Posclásico Tardío (ca. 1479 - 1502 d.C.)",
+        "room": "Sala 6: Mexica",
+        "tags": ["Imperdible", "Obra Maestra", "Monolito"],
+        "hero_image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Piedra_del_Sol_en_el_MNA.jpg/800px-Piedra_del_Sol_en_el_MNA.jpg"
+      },
+      "narrative": {
+        "one_liner": "El gran monumento cosmogónico que sintetiza la era mexica y sus ciclos solares.",
+        "short_desc": "Monumento colosal de basalto tallado en relieve concéntrico. Aunque popularmente se le llama calendario, funcionaba como un altar sagrado (cuauhxicalli) que legitimaba el poder cósmico y militar de Tenochtitlan.",
+        "deep_desc": "La pieza sintetiza la visión espacio-temporal mexica. En su centro figura el rostro del Quinto Sol (Nahui Ollin), rodeado por los glifos de las cuatro eras cósmicas extintas por agua, jaguares, lluvia de fuego y viento. La banda externa está delimitada por dos xiuhcóatl (serpientes de fuego celestes) enfrentadas en la base. Contrario a la creencia popular, no se exhibía verticalmente en muros, sino en posición horizontal sobre una plataforma como ofrendatorio solar."
+      },
+      "audioguide": {
+        "audio_script": "Párate justo al centro frente a la gran piedra. Tienes ante ti veinticuatro toneladas de basalto talladas hace más de quinientos años. No era un calendario de pared; era un altar sagrado. Mira el rostro central: porta un cuchillo de pedernal en lugar de lengua humana, exigiendo alimento cósmico para que el sol vuelva a salir. Fíjate en el borde exterior: dos inmensas serpientes de fuego se arquean por los costados hasta encontrarse frente a frente en la base. Mientras la miras, recuerda que estuvo enterrada durante dos siglos bajo el Zócalo hasta ser rescatada en 1790."
+      },
+      "visual_challenge": [
+        {
+          "id": "challenge-1",
+          "title": "La lengua de piedra",
+          "clue": "Busca el centro exacto. No es una lengua humana; es un cuchillo de pedernal ritual."
+        },
+        {
+          "id": "challenge-2",
+          "title": "Las 4 eras extintas",
+          "clue": "Observa los cuatro cuadros alrededor del centro; muestran al jaguar, el viento, la lluvia de fuego y el agua."
+        },
+        {
+          "id": "challenge-3",
+          "title": "El choque de serpientes",
+          "clue": "Mira la parte más baja del disco donde dos cabezas de reptil abren sus fauces con rostros humanos adentro."
+        }
+      ],
+      "curiosities": [
+        {
+          "id": "curiosity-1",
+          "fact": "Estuvo empotrada verticalmente durante casi un siglo en la torre poniente de la Catedral Metropolitana a la intemperie."
+        },
+        {
+          "id": "curiosity-2",
+          "fact": "Soldados estadounidenses en la invasión de 1847 la usaron como blanco de tiro al blanco; los impactos rasantes aún son visibles."
+        },
+        {
+          "id": "curiosity-3",
+          "fact": "Originalmente estaba pintada con vivos pigmentos rojos, ocres, azules y blancos."
+        }
+      ],
+      "specs": [
+        { "label": "Material", "value": "Basalto de olivino" },
+        { "label": "Diámetro", "value": "3.60 metros" },
+        { "label": "Grosor", "value": "98 centímetros" },
+        { "label": "Peso", "value": "24.5 toneladas" },
+        { "label": "Hallazgo", "value": "1790 en el Zócalo de la CDMX" }
+      ],
+      "faqs": [
+        {
+          "question": "¿Por qué se le llama erróneamente calendario?",
+          "answer": "Porque contiene la cuenta de los 20 días sagrados del tonalpohualli. Sin embargo, carece de divisiones de meses y su función ritual era astronómica y de sacrificio, no de almanaque civil."
+        },
+        {
+          "question": "¿Quién es el personaje tallado al centro?",
+          "answer": "La hipótesis predominante señala a Tonatiuh, dios solar mexica, aunque especialistas también ven rasgos de Tlaltecuhtli, la deidad terrestre devoradora de corazones en el ocaso cósmico."
+        },
+        {
+          "question": "¿Cómo fue trasladada semejante masa de roca?",
+          "answer": "Fue arrastrada desde los yacimientos volcánicos de San Ángel o Xochimilco mediante troncos, sogas y miles de hombres a través de calzadas y balsas sobre el lago de Texcoco."
+        }
+      ],
+      "next_recommendation": {
+        "next_poi_name": "Coatlicue, la del faldón de serpientes",
+        "next_poi_id": "mna-coatlicue"
+      }
+    }
+  ]
+}
