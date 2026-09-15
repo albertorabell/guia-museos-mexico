@@ -20,12 +20,13 @@
   "pois": [
     {
       "poi_id": "piedra-del-sol",
+      "is_premium": false,
       "identification": {
         "title": "Piedra del Sol",
         "culture": "Mexica (Azteca)",
         "period": "Posclásico Tardío (ca. 1479 - 1502 d.C.)",
         "room": "Sala 6: Mexica",
-        "tags": ["Imperdible", "Obra Maestra", "Monolito"],
+        "tags": ["Imperdible", "Gratis", "Monolito"],
         "hero_image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/Piedra_del_Sol_en_el_MNA.jpg/800px-Piedra_del_Sol_en_el_MNA.jpg"
       },
       "narrative": {
@@ -87,12 +88,13 @@
     },
     {
       "poi_id": "coatlicue",
+      "is_premium": true,
       "identification": {
         "title": "Coatlicue",
         "culture": "Mexica (Azteca)",
         "period": "Posclásico Tardío (ca. 1487 - 1521 d.C.)",
         "room": "Sala 6: Mexica",
-        "tags": ["Imperdible", "Diosa Madre", "Monolito"],
+        "tags": ["Exclusivo", "Pase Requerido", "Monolito"],
         "hero_image": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Coatlicue_de_frente.jpg/800px-Coatlicue_de_frente.jpg"
       },
       "narrative": {
