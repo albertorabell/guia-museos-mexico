@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Audioguía Museo - Guía Interactiva</title>
-  <meta name="description" content="Ficha de pieza interactiva para audioguía de museo con rutas adaptativas." />
+  <meta name="description" content="Ficha de pieza interactiva para audioguía de museo con rutas adaptativas y modelo freemium." />
 
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -72,8 +72,66 @@
         <button onclick="closeRouteModal()" class="w-8 h-8 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center text-sm font-bold">✕</button>
       </div>
 
-      <div class="space-y-2.5" id="route-options-list">
-        <!-- Opciones de rutas inyectadas por JS -->
+      <div class="space-y-2.5" id="route-options-list"></div>
+    </div>
+  </div>
+
+  <!-- Modal de Desbloqueo / Compra -->
+  <div id="paywall-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-end justify-center hidden opacity-0 transition-opacity duration-300">
+    <div class="w-full max-w-[480px] bg-[#FAF8F5] rounded-t-3xl p-6 shadow-2xl space-y-5">
+      <div class="flex items-center justify-between pb-3 border-b border-stone-200">
+        <div>
+          <span class="text-[10px] font-bold tracking-widest text-amber-600 uppercase">Pase Completo MNA</span>
+          <h3 class="text-lg font-bold text-stone-900">Desbloquear Toda la Sala</h3>
+        </div>
+        <button onclick="closePaywallModal()" class="w-8 h-8 rounded-full bg-stone-200 text-stone-600 flex items-center justify-center text-sm font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs text-stone-600">
+        <div class="flex items-center gap-2.5">
+          <span class="text-base">🎧</span>
+          <p><strong>Audioguías completas</strong> con voz oficial para todas las piezas.</p>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <span class="text-base">📶</span>
+          <p><strong>Uso 100% sin conexión</strong> en salas subterráneas.</p>
+        </div>
+        <div class="flex items-center gap-2.5">
+          <span class="text-base">⏳</span>
+          <p><strong>Vigencia de 72 horas</strong> válida para 2 dispositivos.</p>
+        </div>
+      </div>
+
+      <!-- Botón de Compra con Stripe (Simulado / Enlace) -->
+      <div class="space-y-2 pt-2">
+        <button 
+          onclick="handleStripeCheckout()"
+          class="w-full py-3.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold text-sm rounded-2xl shadow-lg flex items-center justify-center gap-2 active:scale-95 transition-all"
+        >
+          <span>Adquirir Pase • $79 MXN (~$4 USD)</span>
+        </button>
+
+        <!-- Recuperar acceso existente -->
+        <div class="pt-2 text-center">
+          <button onclick="toggleRestorePassInput()" class="text-xs text-stone-500 underline font-medium">
+            ¿Ya compraste? Activar con correo o simular pase
+          </button>
+        </div>
+
+        <div id="restore-input-box" class="hidden pt-3 space-y-2">
+          <input 
+            type="email" 
+            id="user-email-input" 
+            placeholder="Introduce tu correo de compra" 
+            class="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-xs focus:outline-none focus:border-amber-500 bg-white"
+          />
+          <button 
+            onclick="activateSimulatedLicense()" 
+            class="w-full py-2.5 bg-stone-900 text-white rounded-xl text-xs font-bold active:scale-95 transition-all"
+          >
+            Activar Licencia (Prueba local 72h)
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -98,11 +156,11 @@
       <img id="modal-img-src" src="" alt="" class="max-h-full max-w-full object-contain rounded-lg shadow-2xl transition-transform duration-300" />
     </div>
     <div class="text-center pb-4">
-      <p class="text-stone-400 text-xs">Pellizca con dos dedos para inspeccionar el relieve</p>
+      <p class="text-stone-400 text-xs">Pellizca con dos dedos para explorar el relieve</p>
     </div>
   </div>
 
-  <!-- ARQUITECTURA JS CON SISTEMA DE RUTAS DESACOPLADO -->
+  <!-- ARQUITECTURA JS CON CANDADO FREEMIUM -->
   <script>
     let allPois = [];
     let allRoutes = [];
@@ -126,7 +184,80 @@
       }
     };
 
-    /* Inicialización y descarga del JSON */
+    /* ==========================================================================
+       GESTIÓN DE LICENCIAS LOCALES (FREEMIUM / 72 HORAS)
+       ========================================================================== */
+    function checkUserHasAccess() {
+      const licenseRaw = localStorage.getItem('mna_user_license');
+      if (!licenseRaw) return false;
+
+      try {
+        const license = JSON.parse(licenseRaw);
+        // Comprobar vigencia de tiempo
+        if (Date.now() < license.expires_at) {
+          return true;
+        } else {
+          localStorage.removeItem('mna_user_license');
+          return false;
+        }
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function activateSimulatedLicense() {
+      const emailInput = document.getElementById('user-email-input');
+      const email = emailInput && emailInput.value.trim() ? emailInput.value.trim() : 'turista@demo.com';
+
+      // Pasaporte digital de 72 horas en localStorage
+      const license = {
+        email: email,
+        device_id: 'dev_' + Math.random().toString(36).substring(2, 9),
+        activated_at: Date.now(),
+        expires_at: Date.now() + (72 * 60 * 60 * 1000), // 72 horas
+        sites: ['mna']
+      };
+
+      localStorage.setItem('mna_user_license', JSON.stringify(license));
+      closePaywallModal();
+      showToast('¡Pase activado con éxito! Válido por 72h', '🎉');
+      renderApp();
+    }
+
+    function removeLicenseForTesting() {
+      localStorage.removeItem('mna_user_license');
+      showToast('Pase cerrado (Modo visitante gratuito)', '🔒');
+      renderApp();
+    }
+
+    function handleStripeCheckout() {
+      // Aquí irá el Stripe Payment Link. Por ahora simulamos la compra para probar la app.
+      activateSimulatedLicense();
+    }
+
+    /* Modal Paywall */
+    function openPaywallModal() {
+      const modal = document.getElementById('paywall-modal');
+      if (!modal) return;
+      modal.classList.remove('hidden');
+      setTimeout(() => modal.classList.remove('opacity-0'), 10);
+    }
+
+    function closePaywallModal() {
+      const modal = document.getElementById('paywall-modal');
+      if (!modal) return;
+      modal.classList.add('opacity-0');
+      setTimeout(() => modal.classList.add('hidden'), 300);
+    }
+
+    function toggleRestorePassInput() {
+      const box = document.getElementById('restore-input-box');
+      if (box) box.classList.toggle('hidden');
+    }
+
+    /* ==========================================================================
+       CARGA DE DATOS
+       ========================================================================== */
     async function initApp() {
       const root = document.getElementById('app');
       root.innerHTML = `
@@ -147,15 +278,12 @@
             route_id: 'todas',
             title: 'Recorrido General',
             duration: '30 min',
-            description: 'Recorrido cronológico completo por la sala.',
+            description: 'Recorrido completo por la sala.',
             sequence: allPois.map(p => p.poi_id)
           }
         ];
 
-        // Se selecciona por defecto la primera ruta del JSON
         currentRoute = allRoutes[0];
-        
-        // Iniciar en la primera pieza de la ruta activa
         const firstPoiId = currentRoute.sequence[0] || allPois[0].poi_id;
         loadPoi(firstPoiId);
       } catch (error) {
@@ -170,7 +298,6 @@
       }
     }
 
-    /* Cargar una pieza específica */
     function loadPoi(poiId) {
       const found = allPois.find(p => p.poi_id === poiId);
       if (!found) return;
@@ -189,7 +316,6 @@
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    /* Cambiar de ruta activa */
     function selectRoute(routeId) {
       const foundRoute = allRoutes.find(r => r.route_id === routeId);
       if (!foundRoute) return;
@@ -197,12 +323,9 @@
       currentRoute = foundRoute;
       closeRouteModal();
       showToast(`Itinerario: ${currentRoute.title}`, '🗺️');
-      
-      // Salta a la primera pieza de la nueva ruta
       loadPoi(currentRoute.sequence[0]);
     }
 
-    /* Modal de Rutas */
     function openRouteModal() {
       const modal = document.getElementById('route-modal');
       const list = document.getElementById('route-options-list');
@@ -223,7 +346,7 @@
                 <span class="text-[10px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 font-semibold">${r.duration}</span>
               </div>
               <p class="text-[11px] text-stone-500">${escapeHtml(r.description || '')}</p>
-              <p class="text-[10px] text-amber-800 font-medium">${r.sequence.length} paradas programadas</p>
+              <p class="text-[10px] text-amber-800 font-medium">${r.sequence.length} paradas</p>
             </div>
             ${isSelected ? '<span class="text-amber-600 font-bold text-sm">✓</span>' : ''}
           </div>
@@ -241,14 +364,18 @@
       setTimeout(() => modal.classList.add('hidden'), 300);
     }
 
-    /* RENDERIZADO DINÁMICO */
+    /* ==========================================================================
+       RENDERIZADO DINÁMICO (CON ESTADOS BLOQUEADO / DESBLOQUEADO)
+       ========================================================================== */
     function renderApp() {
       const root = document.getElementById('app');
       if (!root || !poiData || !currentRoute) return;
 
+      const hasPass = checkUserHasAccess();
+      const isLocked = Boolean(poiData.is_premium) && !hasPass;
+
       const { identification, narrative, visual_challenge, curiosities, specs, faqs } = poiData;
 
-      // Cálculo de la posición en la ruta actual
       const currentIndexInRoute = currentRoute.sequence.indexOf(poiData.poi_id);
       const totalSteps = currentRoute.sequence.length;
       const isLastStep = currentIndexInRoute === (totalSteps - 1);
@@ -269,10 +396,17 @@
             <span class="text-[9px]">▼</span>
           </button>
 
+          <!-- Estado del Pase o Favoritos -->
           <div class="flex items-center gap-1">
-            <button onclick="toggleSaveAction()" id="save-btn" class="w-9 h-9 rounded-full flex items-center justify-center transition-all ${appState.isSaved ? 'text-rose-600 bg-rose-50' : 'text-stone-700 hover:bg-stone-200/60'}">
-              <svg class="w-5 h-5 ${appState.isSaved ? 'fill-rose-600 stroke-rose-600' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-            </button>
+            ${hasPass ? `
+              <button onclick="removeLicenseForTesting()" class="px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold tracking-tight" title="Toca para probar modo bloqueado">
+                PASE ACTIVO ✓
+              </button>
+            ` : `
+              <button onclick="openPaywallModal()" class="px-2.5 py-1 rounded-full bg-amber-500 text-stone-950 text-[10px] font-bold tracking-tight shadow-sm">
+                DESBLOQUEAR
+              </button>
+            `}
           </div>
         </header>
 
@@ -309,45 +443,76 @@
             <p class="text-sm font-medium text-stone-600 leading-snug">${escapeHtml(narrative.one_liner)}</p>
           </section>
 
-          <!-- REPRODUCTOR DE VOZ -->
-          <section class="rounded-2xl p-4 bg-gradient-to-br from-stone-900 to-stone-950 text-white shadow-xl relative overflow-hidden border border-stone-800">
-            <div class="flex items-center justify-between mb-3">
-              <div class="flex items-center gap-2">
-                <span class="relative flex h-2.5 w-2.5">
-                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
-                </span>
-                <span class="text-[11px] font-bold uppercase text-amber-400">Audioguía Oficial</span>
-              </div>
-              <button onclick="cycleSpeechRate()" class="px-2 py-0.5 text-[10px] font-semibold text-stone-300 bg-stone-800 rounded-full border border-stone-700">
-                <span id="speed-label">${appState.speechRate}x</span>
-              </button>
-            </div>
-
-            <div class="flex items-center gap-4 py-1">
-              <button onclick="toggleSpeechAudio()" id="audioguide-play-btn" class="w-13 h-13 shrink-0 rounded-full bg-amber-500 text-stone-950 font-bold flex items-center justify-center shadow-lg active:scale-95 transition-all">
-                <svg id="play-icon" class="w-6 h-6 ml-0.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                <svg id="pause-icon" class="w-6 h-6 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-              </button>
-              <div class="flex-1 min-w-0">
-                <p class="text-xs font-semibold text-white">Voz de sala guiada</p>
-                <p id="audio-status-text" class="text-[11px] text-stone-400">Voz nativa en español</p>
-                <div class="w-full bg-stone-700/60 rounded-full h-1.5 overflow-hidden mt-1.5">
-                  <div id="audio-progress-bar" class="bg-amber-400 h-full w-0 transition-all duration-300 rounded-full"></div>
+          <!-- TARJETA DE AUDIOGUÍA (Condicional: Libre o Bloqueada) -->
+          ${
+            isLocked ? `
+              <!-- CANDADO PAYWALL -->
+              <section class="rounded-2xl p-5 bg-gradient-to-br from-stone-900 via-stone-800 to-stone-950 text-white shadow-xl relative overflow-hidden border border-amber-500/30 text-center space-y-3">
+                <div class="w-10 h-10 mx-auto rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-lg">
+                  🔒
                 </div>
-              </div>
-            </div>
-          </section>
+                <div>
+                  <h3 class="text-sm font-bold text-white">Pieza Exclusiva del Pase Completo</h3>
+                  <p class="text-xs text-stone-400 mt-1 max-w-[280px] mx-auto">Desbloquea la audioguía y los detalles arqueológicos de esta y todas las salas.</p>
+                </div>
+                <button 
+                  onclick="openPaywallModal()"
+                  class="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-bold rounded-xl shadow active:scale-95 transition-all"
+                >
+                  Desbloquear Pase por $79 MXN
+                </button>
+              </section>
+            ` : `
+              <!-- REPRODUCTOR LIBRE / DESBLOQUEADO -->
+              <section class="rounded-2xl p-4 bg-gradient-to-br from-stone-900 to-stone-950 text-white shadow-xl relative overflow-hidden border border-stone-800">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <span class="relative flex h-2.5 w-2.5">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                      <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+                    </span>
+                    <span class="text-[11px] font-bold uppercase text-amber-400">Audioguía Oficial</span>
+                  </div>
+                  <button onclick="cycleSpeechRate()" class="px-2 py-0.5 text-[10px] font-semibold text-stone-300 bg-stone-800 rounded-full border border-stone-700">
+                    <span id="speed-label">${appState.speechRate}x</span>
+                  </button>
+                </div>
 
-          <!-- SELECTOR DE LECTURA -->
-          <section class="bg-white rounded-2xl p-4 shadow-sm border border-stone-200/80 space-y-3">
+                <div class="flex items-center gap-4 py-1">
+                  <button onclick="toggleSpeechAudio()" id="audioguide-play-btn" class="w-13 h-13 shrink-0 rounded-full bg-amber-500 text-stone-950 font-bold flex items-center justify-center shadow-lg active:scale-95 transition-all">
+                    <svg id="play-icon" class="w-6 h-6 ml-0.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <svg id="pause-icon" class="w-6 h-6 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                  </button>
+                  <div class="flex-1 min-w-0">
+                    <p class="text-xs font-semibold text-white">Voz de sala guiada</p>
+                    <p id="audio-status-text" class="text-[11px] text-stone-400">Voz nativa en español lista</p>
+                    <div class="w-full bg-stone-700/60 rounded-full h-1.5 overflow-hidden mt-1.5">
+                      <div id="audio-progress-bar" class="bg-amber-400 h-full w-0 transition-all duration-300 rounded-full"></div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            `
+          }
+
+          <!-- SELECTOR DE LECTURA (Desenfocado si está bloqueado) -->
+          <section class="bg-white rounded-2xl p-4 shadow-sm border border-stone-200/80 space-y-3 relative overflow-hidden">
             <div class="flex p-1 bg-stone-100 rounded-xl">
               <button onclick="switchTab('quick')" id="tab-btn-quick" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-stone-900 bg-white shadow-sm">Vistazo rápido</button>
               <button onclick="switchTab('expert')" id="tab-btn-expert" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-stone-500">Para expertos</button>
             </div>
-            <div class="text-stone-700 text-sm leading-relaxed min-h-[80px]">
+            
+            <div class="text-stone-700 text-sm leading-relaxed min-h-[80px] ${isLocked ? 'blur-[3px] select-none opacity-60' : ''}">
               <div id="narrative-content">${escapeHtml(narrative.short_desc)}</div>
             </div>
+
+            ${isLocked ? `
+              <div class="absolute inset-0 top-14 flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
+                <button onclick="openPaywallModal()" class="px-4 py-2 bg-stone-900 text-white text-xs font-bold rounded-xl shadow-lg active:scale-95 transition-all">
+                  🔒 Desbloquear análisis completo
+                </button>
+              </div>
+            ` : ''}
           </section>
 
           <!-- RETO VISUAL -->
@@ -450,7 +615,9 @@
       `;
     }
 
-    /* Utilidades y Audio Nativo */
+    /* ==========================================================================
+       UTILIDADES & AUDIO
+       ========================================================================== */
     function escapeHtml(text) {
       if (typeof text !== 'string') return text;
       return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -579,12 +746,6 @@
       appState.isSpecsOpen = !appState.isSpecsOpen;
       const b = document.getElementById('specs-body');
       if (b) b.classList.toggle('hidden', !appState.isSpecsOpen);
-    }
-
-    function toggleSaveAction() {
-      appState.isSaved = !appState.isSaved;
-      showToast(appState.isSaved ? 'Guardado en favoritos' : 'Eliminado de favoritos');
-      renderApp();
     }
 
     function handleBackAction() {
