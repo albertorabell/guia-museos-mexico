@@ -1,6 +1,22 @@
 {
   "site_id": "mna",
   "name": "Museo Nacional de Antropología",
+  "routes": [
+    {
+      "route_id": "monumentales",
+      "title": "Obras Monumentales",
+      "duration": "45 min",
+      "description": "Las dos piezas colosales imprescindibles de la Sala Mexica.",
+      "sequence": ["piedra-del-sol", "coatlicue"]
+    },
+    {
+      "route_id": "express",
+      "title": "Visita Relámpago (Solo el Sol)",
+      "duration": "15 min",
+      "description": "Para quien dispone de poco tiempo y solo busca la pieza insignia.",
+      "sequence": ["piedra-del-sol"]
+    }
+  ],
   "pois": [
     {
       "poi_id": "piedra-del-sol",
@@ -67,11 +83,7 @@
           "question": "¿Es la pieza original?",
           "answer": "Sí, es el bloque original rescatado intacto en 1790."
         }
-      ],
-      "next_recommendation": {
-        "next_poi_name": "Coatlicue, madre de los dioses",
-        "next_poi_id": "coatlicue"
-      }
+      ]
     },
     {
       "poi_id": "coatlicue",
@@ -138,11 +150,7 @@
           "question": "¿Quién era su hijo principal?",
           "answer": "Huitzilopochtli, el dios mexica de la guerra y patrono de Tenochtitlan."
         }
-      ],
-      "next_recommendation": {
-        "next_poi_name": "Piedra del Sol",
-        "next_poi_id": "piedra-del-sol"
-      }
+      ]
     }
   ]
 }
